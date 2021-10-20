@@ -1,0 +1,7 @@
+#! /bin/bash
+
+for i in '25773550' '172809260'
+do
+    python main.py $i
+    python calc.py $i
+done
