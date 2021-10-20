@@ -67,7 +67,7 @@ def main():
         uList.extend(getFans(upMid, i))
     for u in uList:
         getInfo(u)
-        time.sleep(1)
+        time.sleep(0.8)
     # proxy.times()
     print(f"Cost {time.time()-t0} secs")
     print(f"{up[0]} Finished！")
