@@ -1,77 +1,64 @@
-import os, csv, time, requests
+import os, time
 
 
-def getName(mid):
-    userApi = f"https://api.bilibili.com/x/web-interface/card?mid={mid}"
-    up = session.get(userApi).json()["data"]
-    upName = up["card"]["name"]
-    upFans = int(up["follower"])
-    if upFans < 250:
-        upPages = int(upFans) // 50 + 1
-    else:
-        upPages = 5
-    return upName, upPages
+def sync_data():
+    os.chdir("web")
+    os.system("git pull")
+    if os.path.exists("../vers"):
+        os.system("rm -rf ../vers")
+        print("Removing old vers directory")
+    os.system("mkdir ../vers")
+    log = os.popen("git log --pretty=oneline|cut -c 1-8")
+    ver_list = log.read().splitlines()[:-33]
+    print("Creating vers directory...")
+    for ver in ver_list:
+        os.system(f"git reset --hard {ver} > /dev/null")
+        os.system(f"cp 439916362/朝色泛起之际_.csv ../vers/{ver}.csv > /dev/null")
+    print("Done")
 
 
-def getFans(mid, i):
-    print(f"Page {i+1}...")
-    fansApi = f"http://api.bilibili.com/x/relation/followers?vmid={mid}&pn={i+1}"
-    return session.get(fansApi).json()["data"]["list"]
+def read_data():
+    user_count, bar_dict = {}, {}
+    csv_list = os.listdir("../vers")
+    for csv in csv_list:
+        with open(f"../vers/{csv}", "r") as f:
+            for line in f:
+                line = line.split(",")
+                if line[0].isdigit():
+                    user_count[line[0]] = line[1]
+    for key, value in user_count.items():
+        date = time.strftime("%Y-%m-%d", time.localtime(int(value)))
+        if date not in bar_dict.keys():
+            bar_dict[date] = 1
+        else:
+            bar_dict[date] += 1
+    return bar_dict
 
 
-def getInfo(u):
-    userApi = f"http://api.bilibili.com/x/space/acc/info?mid={u['mid']}&jsonp"
-    while 1:
-        try:
-            ui = session.get(userApi).json()["data"]
-            print(f"UID: {u['mid']}\tLevel: {ui['level']}")
-            break
-        except TypeError:
-            print(f"UID: {u['mid']} TypeError!")
-            return
-        except KeyError:
-            print(f"UID: {u['mid']} KeyError!")
-            return
-    try:
-        with open(f"{upMid}/{up[0]}.csv", "a+", encoding="utf-8") as f:
-            wCsv = csv.writer(f, lineterminator="\n")
-            wCsv.writerow(
-                [
-                    u["mid"],
-                    u["mtime"],
-                    u["uname"],
-                    u["vip"]["vipType"],
-                    ui["level"],
-                    ui["sex"],
-                    u["sign"].replace("\n", " "),
-                ]
-            )
-    except UnicodeEncodeError:
-        print(f'UID: {u["mid"]} UnicodeEncodeError!')
+def draw_charts(bar_dict):
+    xx, yy = [], []
+    for i in sorted(bar_dict):
+        xx.append(i)
+        yy.append(bar_dict[i])
 
+    from pyecharts import options as opts
+    from pyecharts.charts import Bar
 
-def main():
-    global up, upMid, session  # , proxies
-    # proxy.times()
-    # proxies = proxy.get()
-    t0 = time.time()
-    session = requests.Session()
-    upMid = os.sys.argv[1]
-    up = getName(upMid)
-    uList, fList = [], []
-    if not os.path.exists(upMid):
-        os.mkdir(upMid)
-    with open(f"{upMid}/{up[0]}.csv", "w+") as f:
-        f.write("uid,mtime,uname,vipType,level,sex,sign\n")
-    for i in range(up[1]):
-        uList.extend(getFans(upMid, i))
-    for u in uList:
-        getInfo(u)
-        time.sleep(0.8)
-    # proxy.times()
-    print(f"Cost {time.time()-t0} secs")
-    print(f"{up[0]} Finished！")
+    bar = (
+        Bar()
+        .add_xaxis(xx)
+        .add_yaxis("", yy, color="#607D8B")
+        .set_global_opts(
+            xaxis_opts=opts.AxisOpts(axislabel_opts=opts.LabelOpts(rotate=-15)),
+            title_opts=opts.TitleOpts(title="朝色每日涨粉", subtitle=""),
+            datazoom_opts=[opts.DataZoomOpts()],
+        )
+    )
+    bar.render("../index.html")
 
 
 if __name__ == "__main__":
-    main()
+    sync_data()
+    data = read_data()
+    draw_charts(data)
+    print("Done")
