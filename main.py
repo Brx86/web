@@ -13,7 +13,7 @@ def sync_data():
     print("Creating vers directory...")
     for ver in ver_list:
         os.system(f"git reset --hard {ver} > /dev/null")
-        os.system(f"cp 439916362/朝色泛起之际_.csv ../vers/{ver}.csv > /dev/null")
+        os.system(f"cp 439916362/朝色泛起之际_.csv ../vers/{ver}.csv")
     print("Done")
 
 
@@ -54,11 +54,16 @@ def draw_charts(bar_dict):
             datazoom_opts=[opts.DataZoomOpts()],
         )
     )
-    bar.render("../index.html")
+    bar.render("../index0.html")
 
 
 if __name__ == "__main__":
     sync_data()
     data = read_data()
     draw_charts(data)
-    print("Done")
+    print("Drawed.")
+    os.system("cat 439916362/index.html ../index0.html > ../index.html")
+    os.system(
+        "git pull;cp ../index.html .;git add index.html;git commit -m 'update';git push"
+    )
+    print("Pushed.")
